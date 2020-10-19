@@ -1,0 +1,142 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=mbcs">
+        <title>Radar System</title>
+    </head>
+    <style>
+        #canvas {
+            float: right;
+        }
+    </style>
+    <body>
+        <canvas id="canvas" width="1024" height="1024"></canvas>
+    </body>
+    <script>
+    var maps = {
+        'de_cache': {x: -2000, y: 3250, scale: 5.5},
+        'de_cbble': {x: -3840, y: 3072, scale: 6},
+        'de_dust2': {x: -2400, y: 3383, scale: 4.4},
+        'de_inferno': {x: -2087, y: 3870, scale: 4.9},
+        'de_mirage': {x: -3230, y: 1713, scale: 5.0},
+        'de_nuke': {x: -3453, y: 2887, scale: 7},
+        'de_overpass': {x: -4831, y: 1781, scale: 5.2},
+        'de_train': {x: -2477, y: 2392, scale: 4.7}
+    }
+
+    function calculateOrigin(map) {
+        return {
+            x: Math.abs(maps[map].x / maps[map].scale), 
+            y: Math.abs(maps[map].y / maps[map].scale)
+        }
+    }
+
+    function draw(src) {
+        var canvas = document.getElementById('canvas');
+        canvas.style = "background:url(" + src + ".png)";
+    }
+
+    function drawPlayer(x, y, rotation, health, colour) {
+        ctx.save();
+        // Translate ctx to position on map
+        ctx.translate(x, y);
+        // Write health
+        drawHealth(health);
+        // Rotate, (need to adjust from game to canvas angle)
+        ctx.rotate((-rotation + 90) * Math.PI / 180);
+        // Draw rect
+        ctx.fillStyle = colour;
+        // Make sure the center of the square is the player's position
+        ctx.fillRect(-5, -5, 10, 10);
+        // Draw direction
+        drawArrow();
+        ctx.restore();
+    }
+
+    function drawHealth(health) {
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.font = '20px sans-serif';
+        ctx.fillText(health, 12, 12);
+        ctx.restore();
+    }
+
+    function drawArrow() {
+        ctx.save();
+        // Translate to top left of player square
+        ctx.translate(-5, -5);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(5, -10);
+        ctx.lineTo(10, -5);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawAllPlayers(players) {
+        ctx.save();
+        ctx.translate(origin.x, origin.y);
+        for (i = 0; i < players.length; i++) {
+            var colour = players[i].t == 2 ? 'red' : 'blue';
+            var x = players[i].a / maps[map].scale;
+            var y = -players[i].b / maps[map].scale;
+            var rot = players[i].c;
+            var health = players[i].h;
+            drawPlayer(x, y, rot, health, colour);
+        }
+        ctx.restore();
+    }
+
+    function clearAllPlayers() {
+        ctx.save();
+        ctx.clearRect(0, 0, 1024, 1024);
+        ctx.restore();
+    }
+
+    function getPlayers() {
+        ws.send("e");
+    }
+
+    var ws, origin, map, ctx, interval;
+    window.onload = () => {
+        ctx = document.getElementById('canvas').getContext('2d');
+
+        ws = new WebSocket("ws://192.168.1.2:9002");
+        ws.onmessage = (msg) => {
+            var data = JSON.parse(msg.data);
+            if (data.m) {
+                //draw map
+                map = data.m;
+                draw(map);
+                origin = calculateOrigin(map);
+            }
+            if (data.e && data.e.length > 0) {
+                // Clear players
+                clearAllPlayers();
+                // Draw new positions
+                drawAllPlayers(data.e);
+            }
+        }
+
+        ws.onopen = () => {
+            ws.send("m");
+            interval = setInterval(getPlayers, 50);
+        }
+
+        ws.onerror = () => {
+            clearInterval(interval);
+        }
+
+        ws.onclose = () => {
+            clearInterval(interval);
+        }
+
+        window.onunload = () => {
+            clearInterval(interval);
+            ws.close();
+        }
+    }
+    </script>
+</html>
