@@ -6,7 +6,7 @@ Simple radar cheat for popular shooter. Map images, among other things, are not 
 
 1. The server starts a websocket server and attaches to the game's process. 
 2. Using `ReadProcessMemory` it reads the EntityList from memory and sends relevant data to all subscribed clients.
-3. The client(s) read the data and render the players positions, directions, and health values.
+3. The client(s) read the data and render the players positions, directions, and health values on top of the current map.
 
 ## Avoiding detection
 
