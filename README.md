@@ -2,6 +2,8 @@
 
 Simple radar cheat for popular shooter. Map images, among other things, are not included.
 
+![radar](image.png)
+
 ## How it works
 
 1. The server starts a websocket server and attaches to the game's process. 
